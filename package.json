@@ -4,11 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run prisma:deploy && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "db:migrate": "tsx migrate.ts",
-    "prisma:deploy": "prisma migrate deploy"
+    "db:migrate": "tsx migrate.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
