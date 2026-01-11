@@ -1,4 +1,4 @@
-import { defineConfig } from 'prisma/define-config'
+import { defineConfig } from '@prisma/internals'
 
 export default defineConfig({
   datasources: {
