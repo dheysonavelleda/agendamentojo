@@ -18,7 +18,7 @@ import { Background } from "@/components/ui/background-components";
 import { Calendar } from "@/components/ui/calendar";
 import { cancelAppointment } from "@/app/actions/cancel-appointment";
 import { getAppointmentDetails } from "@/app/actions/get-appointment-details";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 type AppointmentDetails = Prisma.AppointmentGetPayload<{
   include: {
