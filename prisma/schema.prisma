@@ -1,0 +1,41 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Client {
+  id           String        @id @default(cuid())
+  fullName     String
+  email        String        @unique
+  phone        String?
+  appointments Appointment[]
+}
+
+model Service {
+  id           String        @id @default(cuid())
+  name         String
+  duration     Int // in minutes
+  price        Float
+  appointments Appointment[]
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  dateTime        DateTime
+  status          String // e.g., 'CONFIRMED', 'CANCELLED', 'PENDING'
+  paymentStatus   String // e.g., 'PAID', 'WAITING'
+  clientId        String
+  serviceId       String
+  client          Client            @relation(fields: [clientId], references: [id])
+  service         Service           @relation(fields: [serviceId], references: [id])
+
+  @@index([clientId])
+  @@index([serviceId])
+}

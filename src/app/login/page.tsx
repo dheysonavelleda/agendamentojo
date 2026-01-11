@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +12,20 @@ import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const router = useRouter();
 
-  const handleSignIn = (provider: "resend" | "google") => {
-    signIn(provider, { email });
+  const handleSignInWithEmail = async () => {
+    const result = await signIn("resend", { email, redirect: false });
+    if (result?.ok && !result.error) {
+      router.push(`/auth/otp?email=${encodeURIComponent(email)}`);
+    } else {
+      // Lidar com erros, por exemplo, mostrar uma notificação
+      console.error("Erro ao iniciar o login por e-mail:", result?.error);
+    }
+  };
+
+  const handleSignInWithGoogle = () => {
+    signIn("google");
   };
 
   return (
@@ -32,7 +44,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="seu@email.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -41,14 +53,14 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full"
-              onClick={() => handleSignIn("resend")}
+              onClick={handleSignInWithEmail}
             >
               Entrar com E-mail
             </Button>
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => handleSignIn("google")}
+              onClick={handleSignInWithGoogle}
             >
               Login com Google
             </Button>

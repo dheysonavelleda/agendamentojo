@@ -21,7 +21,7 @@ export default function Home() {
             </span>
           </div>
           <Link href="/login">
-            <Button>Ver Horários Disponíveis</Button>
+            <Button>Fazer Login</Button>
           </Link>
         </header>
 
