@@ -1,10 +1,9 @@
 "use client";
 
 import * as React from "react";
-import BasePhoneInput, {
-  type CountryCode,
-  type E164Number,
-} from "react-phone-number-input";
+import BasePhoneInput from "react-phone-number-input";
+import type E164Number from "react-phone-number-input";
+import type CountryCode from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
