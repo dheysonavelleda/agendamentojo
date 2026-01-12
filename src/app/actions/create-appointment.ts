@@ -23,14 +23,14 @@ export async function createAppointment(data: {
     }
   }
 
-  let client = await prisma.client.findUnique({
+  let user = await prisma.user.findUnique({
     where: { email: data.email },
   })
 
-  if (!client) {
-    client = await prisma.client.create({
+  if (!user) {
+    user = await prisma.user.create({
       data: {
-        fullName: data.fullName,
+        name: data.fullName,
         email: data.email,
         phone: data.phone,
       },
@@ -42,7 +42,7 @@ export async function createAppointment(data: {
       dateTime: data.dateTime,
       status: 'CONFIRMED',
       paymentStatus: 'PAID',
-      clientId: client.id,
+      userId: user.id,
       serviceId: data.serviceId,
     },
   })
