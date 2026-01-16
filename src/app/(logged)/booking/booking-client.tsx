@@ -67,6 +67,11 @@ export function BookingClient({ initialServices }: BookingClientProps) {
   const [paymentMethod, setPaymentMethod] = useState('pix');
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    console.log('--- onSubmit triggered ---');
+    console.log('Value of date state:', date);
+    console.log('Value of selectedTime state:', selectedTime);
+    console.log('Value of service state:', service);
+
     if (!date || !selectedTime || !service) {
       console.error("onSubmit called without date, time, or service.");
       setError("Ocorreu um erro inesperado. Por favor, tente novamente.");
