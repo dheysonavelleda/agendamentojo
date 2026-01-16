@@ -98,9 +98,12 @@ export function BookingClient({ initialServices }: BookingClientProps) {
   };
 
   const handlePayment = async (data: z.infer<typeof formSchema>) => {
+    console.log("Iniciando handlePayment...");
     const appointmentResult = await onSubmit(data);
+    console.log("Resultado do agendamento:", appointmentResult);
 
     if (appointmentResult.success && service) {
+      console.log("Agendamento criado com sucesso. Criando preferência de pagamento...");
       try {
         const response = await fetch('/api/create-payment', {
           method: 'POST',
@@ -115,16 +118,21 @@ export function BookingClient({ initialServices }: BookingClientProps) {
         });
 
         const payment = await response.json();
+        console.log("Resposta da API de pagamento:", payment);
 
         if (payment.init_point) {
+          console.log("Redirecionando para:", payment.init_point);
           router.push(payment.init_point);
         } else {
+          console.error("API de pagamento não retornou 'init_point'.");
           setError('Não foi possível iniciar o pagamento. Tente novamente.');
         }
       } catch (error) {
         console.error('Erro ao criar preferência de pagamento:', error);
         setError('Erro ao comunicar com o sistema de pagamento.');
       }
+    } else {
+      console.error("Ocorreu um erro ao criar o agendamento ou o serviço não está definido.");
     }
   };
 
