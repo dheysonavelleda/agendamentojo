@@ -1,6 +1,8 @@
 import { getServices } from "@/app/actions/get-services";
 import { BookingClient } from "./booking-client";
 
+export const dynamic = 'force-dynamic';
+
 export default async function BookingPage() {
   console.log("--- Server Component: Buscando serviços do banco de dados... ---");
   const services = await getServices();
