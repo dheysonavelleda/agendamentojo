@@ -67,20 +67,13 @@ export function BookingClient({ initialServices }: BookingClientProps) {
   const [paymentMethod, setPaymentMethod] = useState('pix');
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    console.log('--- onSubmit triggered ---');
-    console.log('Dados do formulário:', data);
-    console.log('Valor de date:', date);
-    console.log('Valor de selectedTime:', selectedTime);
-    console.log('Valor de service:', service);
-
     if (!date || !selectedTime || !service) {
-      console.error("Falha na validação inicial do onSubmit: data, hora ou serviço ausente.");
+      console.error("onSubmit called without date, time, or service.");
       setError("Ocorreu um erro inesperado. Por favor, tente novamente.");
       return { success: false };
     }
 
     try {
-      console.log("Tentando criar agendamento...");
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const dateTime = new Date(date);
       dateTime.setHours(hours, minutes);
@@ -90,7 +83,6 @@ export function BookingClient({ initialServices }: BookingClientProps) {
         serviceId: service.id,
         dateTime,
       });
-      console.log("Resultado da ação createAppointment:", result);
 
       if (result.success) {
         return { success: true, appointmentId: result.appointmentId };
@@ -99,19 +91,16 @@ export function BookingClient({ initialServices }: BookingClientProps) {
         return { success: false };
       }
     } catch (error) {
-      console.error('Erro dentro do try/catch do onSubmit:', error);
+      console.error('Erro no agendamento:', error);
       setError('Erro ao processar o agendamento. Tente novamente.');
       return { success: false };
     }
   };
 
   const handlePayment = async (data: z.infer<typeof formSchema>) => {
-    console.log("--- handlePayment triggered ---");
     const appointmentResult = await onSubmit(data);
-    console.log("Resultado do onSubmit:", appointmentResult);
 
     if (appointmentResult.success && service) {
-      console.log("Agendamento criado com sucesso. Tentando criar preferência de pagamento...");
       try {
         const response = await fetch('/api/create-payment', {
           method: 'POST',
@@ -126,21 +115,16 @@ export function BookingClient({ initialServices }: BookingClientProps) {
         });
 
         const payment = await response.json();
-        console.log("Resposta da API /api/create-payment:", payment);
 
         if (payment.init_point) {
-          console.log("Redirecionando para o Mercado Pago:", payment.init_point);
           router.push(payment.init_point);
         } else {
-          console.error("API de pagamento não retornou 'init_point'.");
           setError('Não foi possível iniciar o pagamento. Tente novamente.');
         }
       } catch (error) {
-        console.error('Erro ao chamar /api/create-payment:', error);
+        console.error('Erro ao criar preferência de pagamento:', error);
         setError('Erro ao comunicar com o sistema de pagamento.');
       }
-    } else {
-      console.error("handlePayment falhou porque onSubmit não teve sucesso ou o serviço é nulo.");
     }
   };
 
