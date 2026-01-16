@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { DynamicPhoneInput } from "@/components/dynamic-phone-input";
-import { Calendar } from "@/components/ui/calendar";
+import { AppointmentPicker } from "@/components/ui/appointment-picker";
 import { Button } from "@/components/ui/button";
 import { createAppointment } from "@/app/actions/create-appointment";
 import { getServices } from "@/app/actions/get-services";
@@ -57,11 +57,12 @@ export default function BookingPage() {
   });
 
   const [date, setDate] = useState<Date | undefined>(new Date('2026-01-15T12:00:00'));
-  const [selectedTime, setSelectedTime] = useState<string | undefined>('10:00');
+  const [selectedTime, setSelectedTime] = useState<string | null>('10:00');
   const [service, setService] = useState<Service | null>(null);
   const [isTermsChecked, setIsTermsChecked] = useState(false);
   const [modalStep, setModalStep] = useState('form'); // 'form' or 'terms'
   const [error, setError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('pix');
   
 
@@ -86,25 +87,67 @@ export default function BookingPage() {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     if (!date || !selectedTime || !service) {
-      setError('Por favor, selecione data e horário.');
-      return;
+      console.error("onSubmit called without date, time, or service.");
+      setError("Ocorreu um erro inesperado. Por favor, tente novamente.");
+      return { success: false };
     }
 
-    const [hours, minutes] = selectedTime.split(':').map(Number);
-    const dateTime = new Date(date);
-    dateTime.setHours(hours, minutes);
+    try {
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const dateTime = new Date(date);
+      dateTime.setHours(hours, minutes);
 
-    const result = await createAppointment({
-      ...data,
-      serviceId: service.id,
-      dateTime,
-    });
+      const result = await createAppointment({
+        ...data,
+        serviceId: service.id,
+        dateTime,
+      });
 
-    if (result.success) {
-      router.push(`/appointment-details?id=${result.appointmentId}`);
-    } else {
-      setError(result.message || 'Ocorreu um erro ao criar o agendamento.');
+      if (result.success) {
+        // Não redireciona mais aqui, apenas retorna sucesso
+        return { success: true, appointmentId: result.appointmentId };
+      } else {
+        setError(result.message || 'Ocorreu um erro ao criar o agendamento.');
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Erro no agendamento:', error);
+      setError('Erro ao processar o agendamento. Tente novamente.');
+      return { success: false };
     }
+  };
+
+  const handlePayment = async (data: z.infer<typeof formSchema>) => {
+    const appointmentResult = await onSubmit(data);
+
+    if (appointmentResult.success && service) {
+      try {
+        const response = await fetch('/api/create-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: service.name,
+            unit_price: service.price,
+            quantity: 1,
+            // Futuramente, podemos passar o appointmentId aqui para associar o pagamento
+          }),
+        });
+
+        const payment = await response.json();
+
+        if (payment.init_point) {
+          router.push(payment.init_point);
+        } else {
+          setError('Não foi possível iniciar o pagamento. Tente novamente.');
+        }
+      } catch (error) {
+        console.error('Erro ao criar preferência de pagamento:', error);
+        setError('Erro ao comunicar com o sistema de pagamento.');
+      }
+    }
+    // Se appointmentResult.success for falso, o erro já foi setado dentro de onSubmit
   };
 
   const availableTimes = [
@@ -142,10 +185,11 @@ export default function BookingPage() {
     <Background>
       <div className="container mx-auto p-4 py-8">
         <div className="max-w-4xl mx-auto text-center mb-12">
-        <h2 className="text-3xl font-bold mb-2">
-          {service ? `${service.name} - R$${service.price.toFixed(2)}` : 'Sessão - Radiestesia Terapêutica'}
-        </h2>
-          <Tabs defaultValue="pix" className="mt-8" onValueChange={(value) => setPaymentMethod(value)}>
+          <h1 className="text-4xl font-bold mb-2">Agendamento</h1>
+          <p className="text-lg text-muted-foreground">
+            {service ? `${service.name} - R$${service.price.toFixed(2)}` : 'Sessão - Radiestesia Terapêutica'}
+          </p>
+          <Tabs defaultValue="pix" className="mt-8 max-w-md mx-auto" onValueChange={(value) => setPaymentMethod(value)}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="pix">PIX</TabsTrigger>
               <TabsTrigger value="card">
@@ -193,122 +237,42 @@ export default function BookingPage() {
             </TabsContent>
           </Tabs>
         </div>
-        <div className="grid md:grid-cols-2 gap-4 items-start">
-          {/* Coluna Esquerda */}
-          <div className="flex flex-col items-center">
-            {isClient && (
-            <>
-              <h2 className="text-xl font-semibold mb-2 mt-8">Selecione uma data</h2>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-md border"
-                disabled={!service}
-              />
-            </>
+
+        <div className="grid grid-cols-1 gap-8 max-w-md mx-auto">
+          {isClient && (
+            <AppointmentPicker
+              date={date}
+              setDate={setDate}
+              time={selectedTime}
+              setTime={setSelectedTime}
+            />
           )}
-          </div>
+        </div>
 
-          {/* Coluna Direita */}
-          <div className="flex flex-col">
-            <h2 className="text-xl font-semibold mb-2">Horários disponíveis</h2>
-            {date ? (
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                {availableTimes.map((time) => (
-                  <Button
-                    key={time}
-                    variant={selectedTime === time ? "default" : "outline"}
-                    onClick={() => setSelectedTime(time)}
-                    className="px-2 py-1 text-xs"
-                    size="sm"
-                  >
-                    {time}
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-4">Selecione uma data para ver os horários.</p>
-            )}
-
-            <div className="mt-8">
-              <h3 className="text-lg font-semibold">Opções de Pagamento</h3>
-              <div className="flex space-x-4 mt-4">
-                {paymentMethod === 'pix' && (
-                  <AlertDialog onOpenChange={() => setModalStep('form')}>
-                    <AlertDialogTrigger asChild>
-                      <Button disabled={!date || !selectedTime}>
-                        Pagar Sinal (PIX)
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      {modalStep === 'form' && (
-                        <>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Informações de Contato</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Preencha seus dados para continuar com o agendamento.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          {renderContactForm()}
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <Button onClick={() => setModalStep('terms')} disabled={!isValid}>
-                              Continuar
-                            </Button>
-                          </AlertDialogFooter>
-                        </>
-                      )}
-                      {modalStep === 'terms' && (
-                        <>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Termos de Agendamento</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Ao pagar o sinal, você reservará o direito de ser
-                              atendido na data e horário selecionado.
-                              <br />
-                              <br />
-                              <strong>Política de Cancelamento:</strong> Reagendamentos e cancelamentos devem ser feitos com mais de 12 horas de antecedência. Dentro do período de 12 horas antes da consulta, não será possível reagendar e o valor do sinal (R$ 100) será retido.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <div className="flex items-center space-x-2 my-4">
-                            <Checkbox
-                              id="terms"
-                              checked={isTermsChecked}
-                              onCheckedChange={(checked) =>
-                                setIsTermsChecked(checked as boolean)
-                              }
-                            />
-                            <Label
-                              htmlFor="terms"
-                              className="text-sm font-medium leading-none text-muted-foreground"
-                            >
-                              Estou ciente e concordo com o termo acima.
-                            </Label>
-                          </div>
-                          <AlertDialogFooter>
-                            <Button variant="ghost" onClick={() => setModalStep('form')}>Voltar</Button>
-                            <AlertDialogAction
-                              disabled={!isTermsChecked}
-                              onClick={handleFormSubmit(onSubmit)}
-                            >
-                              Continuar para Pagamento
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-                        </>
-                      )}
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-                <AlertDialog onOpenChange={() => setModalStep('form')}>
+        <div className="mt-12 flex justify-center">
+          <div className="w-full max-w-md text-center">
+            <h3 className="text-lg font-semibold">Opções de Pagamento</h3>
+            <div className="flex justify-center space-x-4 mt-4">
+              {paymentMethod === 'pix' && (
+                <AlertDialog onOpenChange={(open) => {
+                  if (open) {
+                    if (!date || !selectedTime) {
+                      setModalError('Por favor, selecione data e horário.');
+                    } else {
+                      setModalError(null);
+                      setModalStep('form');
+                    }
+                  }
+                }}>
                   <AlertDialogTrigger asChild>
-                    <Button disabled={!date || !selectedTime}>
-                      {paymentMethod === 'card' ? 'Pagar' : 'Pagar Valor Total'}
+                    <Button>
+                      Pagar Sinal (PIX)
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
-                  {modalStep === 'form' && (
+                    {modalError ? (
+                      <div className="text-red-500 text-center p-4">{modalError}</div>
+                    ) : modalStep === 'form' ? (
                       <>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Informações de Contato</AlertDialogTitle>
@@ -324,17 +288,16 @@ export default function BookingPage() {
                           </Button>
                         </AlertDialogFooter>
                       </>
-                    )}
-                    {modalStep === 'terms' && (
+                    ) : (
                       <>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Termos de Agendamento</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Ao realizar o pagamento, você reservará o direito de ser
+                            Ao pagar o sinal, você reservará o direito de ser
                             atendido na data e horário selecionado.
                             <br />
                             <br />
-                            <strong>Política de Cancelamento:</strong> Reagendamentos e cancelamentos devem ser feitos com mais de 12 horas de antecedência. Dentro do período de 12 horas antes da consulta, não será possível reagendar e será retido o valor de R$ 100 referente ao sinal.
+                            <strong>Política de Cancelamento:</strong> Reagendamentos e cancelamentos devem ser feitos com mais de 12 horas de antecedência. Dentro do período de 12 horas antes da consulta, não será possível reagendar e o valor do sinal (R$ 100) será retido.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <div className="flex items-center space-x-2 my-4">
@@ -366,7 +329,45 @@ export default function BookingPage() {
                     )}
                   </AlertDialogContent>
                 </AlertDialog>
-              </div>
+              )}
+              <AlertDialog onOpenChange={(open) => {
+                if (open) {
+                  if (!date || !selectedTime) {
+                    setModalError('Por favor, selecione data e horário.');
+                  } else {
+                    setModalError(null);
+                    setModalStep('form');
+                  }
+                }
+              }}>
+                <AlertDialogTrigger asChild>
+                  <Button>
+                    {paymentMethod === 'card' ? 'Pagar' : 'Pagar Valor Total'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  {modalError ? (
+                    <div className="text-red-500 text-center p-4">{modalError}</div>
+                  ) : (
+                    <>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Informações de Contato</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Preencha seus dados para continuar com o agendamento.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      {renderContactForm()}
+                      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleFormSubmit(handlePayment)} disabled={!isValid}>
+                          Continuar para Pagamento
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </>
+                  )}
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </div>
