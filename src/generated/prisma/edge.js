@@ -186,6 +186,10 @@ const config = {
         "fromEnvVar": null,
         "value": "darwin-arm64",
         "native": true
+      },
+      {
+        "fromEnvVar": null,
+        "value": "rhel-openssl-3.0.x"
       }
     ],
     "previewFeatures": [],
@@ -201,7 +205,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
-  "postinstall": true,
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -210,8 +214,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider     = \"postgresql\"\n  url          = env(\"DATABASE_URL\")\n  relationMode = \"prisma\"\n}\n\nmodel User {\n  id            String        @id @default(uuid())\n  name          String?\n  email         String?       @unique\n  emailVerified DateTime?\n  image         String?\n  phone         String?\n  accounts      Account[]\n  sessions      Session[]\n  appointments  Appointment[]\n}\n\nmodel Account {\n  id                String  @id @default(uuid())\n  userId            String\n  type              String\n  provider          String\n  providerAccountId String\n  refresh_token     String?\n  access_token      String?\n  expires_at        Int?\n  token_type        String?\n  scope             String?\n  id_token          String?\n  session_state     String?\n\n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([provider, providerAccountId])\n}\n\nmodel Session {\n  id           String   @id @default(uuid())\n  sessionToken String   @unique\n  userId       String\n  expires      DateTime\n  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n}\n\nmodel VerificationToken {\n  identifier String\n  token      String   @unique\n  expires    DateTime\n\n  @@unique([identifier, token])\n}\n\nmodel Service {\n  id           String        @id @default(uuid())\n  name         String\n  duration     Int // in minutes\n  price        Float\n  appointments Appointment[]\n}\n\nmodel Appointment {\n  id            String   @id @default(uuid())\n  dateTime      DateTime\n  status        String // e.g., 'CONFIRMED', 'CANCELLED', 'PENDING'\n  paymentStatus String // e.g., 'PAID', 'WAITING'\n  userId        String\n  serviceId     String\n  user          User     @relation(fields: [userId], references: [id])\n  service       Service  @relation(fields: [serviceId], references: [id])\n\n  @@index([userId])\n  @@index([serviceId])\n}\n\n",
-  "inlineSchemaHash": "2978026458da91c5dfd87bb61e2ed006ed29934d12baff05d3a9633b90e41911",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../src/generated/prisma\"\n  binaryTargets = [\"native\", \"rhel-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider     = \"postgresql\"\n  url          = env(\"DATABASE_URL\")\n  relationMode = \"prisma\"\n}\n\nmodel User {\n  id            String        @id @default(uuid())\n  name          String?\n  email         String?       @unique\n  emailVerified DateTime?\n  image         String?\n  phone         String?\n  accounts      Account[]\n  sessions      Session[]\n  appointments  Appointment[]\n}\n\nmodel Account {\n  id                String  @id @default(uuid())\n  userId            String\n  type              String\n  provider          String\n  providerAccountId String\n  refresh_token     String?\n  access_token      String?\n  expires_at        Int?\n  token_type        String?\n  scope             String?\n  id_token          String?\n  session_state     String?\n\n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([provider, providerAccountId])\n}\n\nmodel Session {\n  id           String   @id @default(uuid())\n  sessionToken String   @unique\n  userId       String\n  expires      DateTime\n  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n}\n\nmodel VerificationToken {\n  identifier String\n  token      String   @unique\n  expires    DateTime\n\n  @@unique([identifier, token])\n}\n\nmodel Service {\n  id           String        @id @default(uuid())\n  name         String\n  duration     Int // in minutes\n  price        Float\n  appointments Appointment[]\n}\n\nmodel Appointment {\n  id            String   @id @default(uuid())\n  dateTime      DateTime\n  status        String // e.g., 'CONFIRMED', 'CANCELLED', 'PENDING'\n  paymentStatus String // e.g., 'PAID', 'WAITING'\n  userId        String\n  serviceId     String\n  user          User     @relation(fields: [userId], references: [id])\n  service       Service  @relation(fields: [serviceId], references: [id])\n\n  @@index([userId])\n  @@index([serviceId])\n}\n\n",
+  "inlineSchemaHash": "a25661c321c21135329fbfcb74004f99af343bc0a722a94c5ec964f00853bfb1",
   "copyEngine": true
 }
 config.dirname = '/'
